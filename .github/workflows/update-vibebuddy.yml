@@ -1,0 +1,32 @@
+# Follows VibeBuddy releases: once an hour (or by hand), point the cask at the latest one and commit if it changed.
+name: update-vibebuddy
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-vibebuddy
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Point the cask at the latest release
+        id: update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "version=$(scripts/update-vibebuddy.sh)" >> "${GITHUB_OUTPUT}"
+      - name: Commit
+        run: |
+          git diff --quiet && { echo "already at ${{ steps.update.outputs.version }}"; exit 0; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "vibebuddy ${{ steps.update.outputs.version }}"
+          git push
